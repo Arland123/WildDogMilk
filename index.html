@@ -13,7 +13,7 @@
 <meta property="og:description" content="十一级奶盒连锁合成，从野生马尿养到野生奶·终极进化版。">
 <meta property="og:image" content="img/11.png">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
   body {
     background: linear-gradient(#fff8ec, #ffdca8);
@@ -21,7 +21,7 @@
     font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     display: flex; flex-direction: column; align-items: center;
     padding: 8px 0 calc(6px + env(safe-area-inset-bottom));
-    touch-action: none; user-select: none; -webkit-user-select: none;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 8px; }
   .title { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #c2410c; text-shadow: 0 2px 0 #fff; }
@@ -97,20 +97,20 @@
 'use strict';
 
 // ===== 十一级奶盒 =====
-// s：面积开方（决定体积），逐级 +7 → +47，保证每一级都能一眼看出大小
+// s：面积开方（决定体积），相邻两级线性尺寸约差 12%~24%，保证每一级都能一眼看出大小
 // aspect：贴图宽高比（img/N.png 的实际裁切比例），宽 = s·√aspect，高 = s/√aspect
 const LEVELS = [
-  { name: '野生马尿',         color: '#f2c230', s: 26,  aspect: .468 },
-  { name: '野生狗尿',         color: '#5fa83c', s: 33,  aspect: .436 },
-  { name: '野生鼠奶',         color: '#4a4f58', s: 41,  aspect: .433 },
-  { name: '野生驴奶',         color: '#2e7fc9', s: 50,  aspect: .436 },
-  { name: '老母鸡奶',         color: '#8a5a2b', s: 60,  aspect: .451 },
-  { name: '野生见手青奶',     color: '#2f6a3d', s: 71,  aspect: .440 },
-  { name: '野老猫猴奶',       color: '#2b2b33', s: 83,  aspect: .427 },
-  { name: '野生爱因斯坦奶',   color: '#5b3a91', s: 96,  aspect: .423 },
-  { name: '幻纹虎奶',         color: '#d9531e', s: 110, aspect: .431 },
-  { name: '野生龙奶',         color: '#e07a1f', s: 125, aspect: .435 },
-  { name: '野生奶·终极进化版', color: '#1f4fa8', s: 172, aspect: .736 },
+  { name: '野生马尿',         color: '#f2c230', s: 42,  aspect: .468 },
+  { name: '野生狗尿',         color: '#5fa83c', s: 51,  aspect: .436 },
+  { name: '野生鼠奶',         color: '#4a4f58', s: 62,  aspect: .433 },
+  { name: '野生驴奶',         color: '#2e7fc9', s: 75,  aspect: .436 },
+  { name: '老母鸡奶',         color: '#8a5a2b', s: 90,  aspect: .451 },
+  { name: '野生见手青奶',     color: '#2f6a3d', s: 104, aspect: .440 },
+  { name: '野老猫猴奶',       color: '#2b2b33', s: 120, aspect: .427 },
+  { name: '野生爱因斯坦奶',   color: '#5b3a91', s: 136, aspect: .423 },
+  { name: '幻纹虎奶',         color: '#d9531e', s: 154, aspect: .431 },
+  { name: '野生龙奶',         color: '#e07a1f', s: 171, aspect: .435 },
+  { name: '野生奶·终极进化版', color: '#1f4fa8', s: 211, aspect: .736 },
 ];
 LEVELS.forEach((L) => {
   L.w = L.s * Math.sqrt(L.aspect);
@@ -123,8 +123,9 @@ const MERGE_SCORE = LEVELS.map((_, i) => i * (i + 1)); // 合成出第 i 级得�
 const FINAL_BONUS = 1000;                              // 两盒终极狗奶相撞：一起炸掉
 
 // ===== 世界参数（逻辑坐标） =====
-const W = 400, H = 640;
-const DEAD_Y = 104;
+// 警戒线要高过最大的可投放奶盒（第 5 级），手上那盒才能完整显示
+const W = 400, H = 720;
+const DEAD_Y = 150;
 const STEP = 1000 / 60;
 const PI2 = Math.PI * 2;
 const TEXT_FONT = '"PingFang SC","Microsoft YaHei",sans-serif';
