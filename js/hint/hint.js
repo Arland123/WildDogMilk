@@ -147,38 +147,64 @@
     setTimeout(function () { tone(1140, .22, 'sine', .2, .1); }, 130);
   }
 
+  // 该横坐标下方的堆叠表面高度（没有盒子就是地板）
+  function surfaceY(x) {
+    var y = H;
+    cartons().forEach(function (b) {
+      if (!b.bounds) return;
+      if (x >= b.bounds.min.x - 2 && x <= b.bounds.max.x + 2) y = Math.min(y, b.bounds.min.y);
+    });
+    return y;
+  }
+
   // 在棋盘坐标系内绘制（由 render() 调用）
   function draw(g) {
     if (!unlocked || !result || over || pending) return;
     var x = result.x;
     if (typeof x !== 'number') return;
+    var landY = surfaceY(x);
 
     g.save();
-    // 推荐落点：绿色虚线 + 箭头
-    g.setLineDash([10, 9]);
-    g.lineWidth = 2.5;
-    g.strokeStyle = 'rgba(22,163,74,.75)';
-    g.beginPath(); g.moveTo(x, C_DEAD() - 34); g.lineTo(x, H); g.stroke();
+    // 推荐落点的浅色竖带，比纯线更容易注意
+    g.fillStyle = 'rgba(22,163,74,.07)';
+    g.fillRect(x - 9, DEAD_Y - 30, 18, Math.max(0, landY - DEAD_Y + 30));
+
+    // 绿色虚线：只画到落点，不穿过已有的奶盒
+    g.setLineDash([9, 8]);
+    g.lineWidth = 2;
+    g.strokeStyle = 'rgba(22,163,74,.7)';
+    g.beginPath(); g.moveTo(x, DEAD_Y - 30); g.lineTo(x, landY - 3); g.stroke();
     g.setLineDash([]);
-    g.fillStyle = 'rgba(22,163,74,.9)';
+
+    // 落点小三角
+    g.fillStyle = 'rgba(22,163,74,.85)';
     g.beginPath();
-    g.moveTo(x, C_DEAD() - 34);
-    g.lineTo(x - 7, C_DEAD() - 46);
-    g.lineTo(x + 7, C_DEAD() - 46);
+    g.moveTo(x, DEAD_Y - 30);
+    g.lineTo(x - 6, DEAD_Y - 42);
+    g.lineTo(x + 6, DEAD_Y - 42);
     g.closePath();
     g.fill();
 
-    // 下一盒的预估位置：蓝色更淡的线
+    // 落点标记
+    g.beginPath();
+    g.arc(x, landY - 3, 3.2, 0, Math.PI * 2);
+    g.fill();
+
+    // 下一盒的预估位置：更淡的蓝线，同样只画到落点
     if (typeof result.nextX === 'number') {
-      g.setLineDash([6, 10]);
-      g.lineWidth = 2;
-      g.strokeStyle = 'rgba(37,99,235,.45)';
-      g.beginPath(); g.moveTo(result.nextX, C_DEAD() - 54); g.lineTo(result.nextX, H); g.stroke();
+      var ny = surfaceY(result.nextX);
+      g.setLineDash([5, 9]);
+      g.lineWidth = 1.8;
+      g.strokeStyle = 'rgba(37,99,235,.4)';
+      g.beginPath(); g.moveTo(result.nextX, DEAD_Y - 52); g.lineTo(result.nextX, ny - 3); g.stroke();
+      g.setLineDash([]);
+      g.beginPath();
+      g.arc(result.nextX, ny - 3, 2.4, 0, Math.PI * 2);
+      g.fillStyle = 'rgba(37,99,235,.45)';
+      g.fill();
     }
     g.restore();
   }
-
-  function C_DEAD() { return DEAD_Y; }
 
   function install() {
     btn = document.getElementById('hintBtn');
