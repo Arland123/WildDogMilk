@@ -1,0 +1,8 @@
+# 统一行尾，避免 Windows 上整文件 diff
+* text=auto
+*.html text eol=lf
+*.js text eol=lf
+*.md text eol=lf
+*.json text eol=lf
+*.png binary
+*.jpg binary
