@@ -155,6 +155,16 @@ const MODES = { hard: { name: '困难', h: 720 }, easy: { name: '简单', h: 750
 // 在测试链接里选的难度、刷的分数都会串到正式版，看起来就像"困难模式却是简单布局"
 const SCOPE = /\/test\//.test(location.pathname) ? 'test_' : '';
 const MODE_KEY = SCOPE + 'wildDogMilkMode';
+
+// 一次性修正：加路径隔离之前，测试页和正式版共用一个 key，难度可能被测试带偏。
+// 这里只重置一次（用独立标记），之后照常记忆用户自己的选择。
+(function resetStaleMode() {
+  if (SCOPE) return;
+  if (localStorage.getItem('wildDogMilkModeReset') === '1') return;
+  localStorage.removeItem('wildDogMilkMode');
+  localStorage.setItem('wildDogMilkModeReset', '1');
+})();
+
 let mode = localStorage.getItem(MODE_KEY) === 'easy' ? 'easy' : 'hard';
 const W = 400;
 let H = MODES[mode].h;
