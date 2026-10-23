@@ -17,32 +17,58 @@
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overflow: hidden; }
   body {
-    background: linear-gradient(#fff8ec, #ffdca8);
-    color: #5a3d1e;
+    background: radial-gradient(125% 85% at 50% 0%, #fffdf8 0%, #fff4e2 45%, #ffe0b0 100%);
+    color: #4a3218;
     font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     display: flex; flex-direction: column; align-items: center;
     padding: 8px 0 calc(6px + env(safe-area-inset-bottom));
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 2px 8px; }
-  .title { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #c2410c; text-shadow: 0 2px 0 #fff; }
-  .score { font-size: 30px; font-weight: 900; line-height: 1.1; }
-  .best { font-size: 12px; opacity: .75; }
-  .right { display: flex; align-items: center; gap: 8px; }
-  .next { display: flex; flex-direction: column; align-items: center; font-size: 11px; background: #fff7; border-radius: 12px; padding: 4px 8px; }
-  .next canvas { width: 44px; height: 60px; }
+  /* 顶部信息栏：与棋盘同宽的卡片，三行左对齐 + 右侧预览/按钮 */
+  header {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 12px; margin-bottom: 8px;
+    background: rgba(255,255,255,.62); border: 1px solid rgba(180,120,50,.16);
+    border-radius: 14px; box-shadow: 0 2px 10px rgba(140,90,30,.07);
+  }
+  .hud-left { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .title { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #b45309; }
+  .scoreline { display: flex; align-items: baseline; gap: 4px; }
+  .score { font-size: 34px; font-weight: 900; line-height: 1.05; color: #3f2a12; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+  .unit { font-size: 11px; font-weight: 700; color: rgba(120,80,30,.55); }
+  .best { display: flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(90,61,30,.62); }
+  .best b { font-weight: 700; color: rgba(90,61,30,.82); font-variant-numeric: tabular-nums; }
+  .hud-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .next {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    width: 54px; flex: 0 0 auto; padding: 5px 0 4px;
+    background: #fffdf7; border: 1px solid rgba(180,120,50,.2); border-radius: 11px;
+  }
+  .next-label { font-size: 9px; letter-spacing: .5px; color: rgba(120,80,30,.62); white-space: nowrap; }
+  .next canvas { width: 40px; height: 52px; }
   .btns { display: flex; flex-direction: column; gap: 6px; }
   .icon-btn {
-    width: 36px; height: 36px; border: 0; border-radius: 10px; cursor: pointer;
-    background: #fff; color: #5a3d1e; font-size: 18px; box-shadow: 0 2px 0 #e5b679;
+    width: 32px; height: 32px; display: grid; place-items: center;
+    border: 1px solid rgba(180,120,50,.18); border-radius: 50%; cursor: pointer;
+    background: #fffdf7; color: #7a5327; box-shadow: 0 1px 2px rgba(140,90,30,.1);
   }
-  .icon-btn:focus-visible, .btn:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+  .icon-btn svg { width: 17px; height: 17px; }
+  .icon-btn .ico-off { display: none; }
+  .icon-btn.muted .ico-on { display: none; }
+  .icon-btn.muted .ico-off { display: block; }
+  .icon-btn:active { transform: translateY(1px); }
+  .icon-btn:focus-visible, .btn:focus-visible, .mode-chip:focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
   #board {
-    position: relative; border-radius: 16px; overflow: hidden;
-    box-shadow: 0 6px 0 #d69a55, 0 10px 24px #0002; background: #fffdf6;
+    position: relative; border-radius: 18px; overflow: hidden;
+    border: 1px solid rgba(150,100,40,.16);
+    box-shadow: inset 0 1px 0 #fff, 0 10px 26px rgba(130,80,25,.16);
+    background: #fffdf7;
   }
   #game { display: block; width: 100%; height: 100%; touch-action: none; cursor: pointer; }
-  #chain { display: block; margin-top: 10px; }
+  #chain {
+    display: block; margin-top: 8px; border-radius: 12px;
+    background: rgba(255,255,255,.5); box-shadow: inset 0 0 0 1px rgba(180,120,50,.14);
+  }
   .overlay {
     position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     background: #0006; backdrop-filter: blur(2px);
@@ -61,28 +87,34 @@
   .dialog .row .btn { margin-top: 0; }
   .btn.ghost { background: #fff; color: #8a5a2b; box-shadow: 0 3px 0 #e5b679; }
   .dialog .hint { font-size: 12px; opacity: .7; }
-  /* 难度切换：贴在「最高 xx」后面，做成小圆角标签，不额外占头部高度 */
+  /* 小标签：难度 / 提示共用，统一成胶囊 */
   .mode-chip {
-    margin-left: 6px; padding: 1px 7px; border: 0; border-radius: 9px; cursor: pointer;
-    font: inherit; font-size: 11px; font-weight: 700; color: #8a5a2b; vertical-align: 1px;
-    background: #fff; box-shadow: 0 1px 0 #e5b679;
+    padding: 1px 8px; border: 1px solid rgba(180,120,50,.22); border-radius: 999px; cursor: pointer;
+    font: inherit; font-size: 10px; font-weight: 700; line-height: 15px; color: #8a5a2b;
+    background: #fff;
   }
+  .mode-chip[hidden] { display: none; }
   .mode-chip:active { transform: translateY(1px); }
 </style>
 </head>
 <body>
 
 <header id="top">
-  <div>
+  <div class="hud-left">
     <div class="title">合成野生狗奶</div>
-    <div class="score" id="score" aria-live="polite">0</div>
-    <div class="best">最高 <span id="best">0</span><button class="mode-chip" id="modeBtn" type="button" aria-label="难度：困难，点击切换">困难</button><button class="mode-chip" id="hintBtn" type="button" aria-label="提示模式" hidden>提示</button></div>
+    <div class="scoreline"><span class="score" id="score" aria-live="polite">0</span><span class="unit">分</span></div>
+    <div class="best">最高 <b id="best">0</b><button class="mode-chip" id="modeBtn" type="button" aria-label="难度：困难，点击切换">困难</button><button class="mode-chip" id="hintBtn" type="button" aria-label="提示模式" hidden>提示</button></div>
   </div>
-  <div class="right">
-    <div class="next"><span>下一个</span><canvas id="next" aria-label="下一个奶盒"></canvas></div>
+  <div class="hud-right">
+    <div class="next"><span class="next-label">下一个</span><canvas id="next" aria-label="下一个奶盒"></canvas></div>
     <div class="btns">
-      <button class="icon-btn" id="soundBtn" type="button" aria-label="音效开关" aria-pressed="true">🔊</button>
-      <button class="icon-btn" id="resetBtn" type="button" aria-label="重新开始">↻</button>
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="音效开关" aria-pressed="true">
+        <svg class="ico-on" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5h2.7L10.4 4.2v11.6L6.7 12.5H4z"/><path d="M13.2 7.4a3.6 3.6 0 0 1 0 5.2"/></svg>
+        <svg class="ico-off" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5h2.7L10.4 4.2v11.6L6.7 12.5H4z"/><path d="M13.4 8l3.2 4M16.6 8l-3.2 4"/></svg>
+      </button>
+      <button class="icon-btn" id="resetBtn" type="button" aria-label="重新开始">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16.2 10a6.2 6.2 0 1 1-1.9-4.4"/><path d="M16.4 3.6v3.2h-3.2"/></svg>
+      </button>
     </div>
   </div>
 </header>
@@ -449,24 +481,34 @@ function render() {
 
   // 背景：超市冷柜货架
   const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#fffaf0'); bg.addColorStop(1, '#ffe9c7');
+  bg.addColorStop(0, '#fffdf7'); bg.addColorStop(.55, '#fff7e6'); bg.addColorStop(1, '#ffeccd');
   ctx.fillStyle = bg; ctx.fillRect(-20, -20, W + 40, H + 40);
   // 货架横线：虚线，避免和实线的警戒线抢视觉重量
   ctx.save();
-  ctx.setLineDash([12, 10]);
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#f3d3a3';
+  ctx.setLineDash([9, 13]);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(214,154,85,.42)';
   for (let y = DEAD_Y + 130; y < H; y += 130) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
   }
   ctx.restore();
-  ctx.fillStyle = '#d69a55'; ctx.fillRect(0, H - 6, W, 6);
+  // 柜底
+  const floor = ctx.createLinearGradient(0, H - 7, 0, H);
+  floor.addColorStop(0, 'rgba(214,154,85,.45)'); floor.addColorStop(1, 'rgba(190,130,70,.75)');
+  ctx.fillStyle = floor; ctx.fillRect(0, H - 7, W, 7);
 
   // 警戒线：实线，越线时变红闪烁
   ctx.save();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = dangerT > 0 ? `rgba(230,40,30,${.5 + .5 * Math.sin(time * 18)})` : 'rgba(200,120,60,.35)';
+  ctx.lineWidth = dangerT > 0 ? 2.5 : 1.6;
+  ctx.setLineDash(dangerT > 0 ? [] : [0]);
+  ctx.strokeStyle = dangerT > 0 ? `rgba(230,40,30,${.5 + .5 * Math.sin(time * 18)})` : 'rgba(198,120,60,.45)';
   ctx.beginPath(); ctx.moveTo(0, DEAD_Y); ctx.lineTo(W, DEAD_Y); ctx.stroke();
+  if (dangerT <= 0) {
+    ctx.font = `700 10px ${TEXT_FONT}`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(170,100,45,.5)';
+    ctx.fillText('警戒', 6, DEAD_Y - 6);
+  }
   ctx.restore();
 
   // 瞄准线 + 手上的奶盒
@@ -509,13 +551,15 @@ function render() {
 }
 
 function drawNext() {
-  const cw = 44 * dpr, ch = 60 * dpr;
+  // 固定 40×52（与 CSS 中 .next canvas 一致），避免读父元素尺寸造成抖动
+  const cssW = 40, cssH = 52;
+  const cw = cssW * dpr, ch = cssH * dpr;
   nextCvs.width = cw; nextCvs.height = ch;
   nctx.setTransform(1, 0, 0, 1, 0, 0);
   nctx.clearRect(0, 0, cw, ch);
-  // 按真实比例缩放（可投放的最大一级占满框）
-  const big = LEVELS[SPAWN_WEIGHTS.length - 1];
-  const k = Math.min((cw - 4) / big.w, (ch - 6) / big.h);
+  // 按当前这一级自身尺寸填满框高：H5 原来按最大可投放级统一缩放，小盒子会小到看不清
+  const L = LEVELS[nextLv];
+  const k = Math.min((cw - 6) / L.w, (ch - 4) / L.h);
   drawCarton(nctx, nextLv, cw / 2, ch / 2, k);
 }
 
@@ -620,7 +664,7 @@ $('modeOk').addEventListener('click', () => { $('modeAsk').hidden = true; applyM
 $('modeCancel').addEventListener('click', () => { $('modeAsk').hidden = true; });
 const soundBtn = $('soundBtn');
 function syncSound() {
-  soundBtn.textContent = soundOn ? '🔊' : '🔇';
+  soundBtn.classList.toggle('muted', !soundOn);
   soundBtn.setAttribute('aria-pressed', String(soundOn));
 }
 soundBtn.addEventListener('click', () => {
