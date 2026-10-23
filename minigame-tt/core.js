@@ -22,6 +22,7 @@ var MG = MG || {};
     score: 0, best: 0, maxLv: 0,
     curLv: 0, nextLv: 0, aimX: C.W / 2,
     dropCd: 0, dangerT: 0, shake: 0, over: false, time: 0,
+    revive: 0, // 复活次数（侧边栏福利发放）
     particles: [], popups: [], mergeQueue: [], walls: [],
     hooks: { sound: null, onOver: null, saveBest: null },
   };
@@ -161,6 +162,27 @@ var MG = MG || {};
     if (lv === C.LAST) { S.shake = 10; sound('big'); } else { S.shake = Math.max(S.shake, lv * .5); sound('merge'); }
   }
 
+  // 复活：清掉「越过自上往下第 2 条虚线」的所有奶盒，然后继续这一局
+  function revive() {
+    var line = C.REVIVE_LINE;
+    var list = cartons();
+    var removed = 0;
+    for (var i = 0; i < list.length; i++) {
+      var b = list[i];
+      if (b.bounds.min.y < line) {
+        burst(b.position.x, b.position.y, C.LEVELS[b.lv].color, 10, 240);
+        Composite.remove(world, b);
+        removed++;
+      }
+    }
+    S.over = false;
+    S.dangerT = 0;
+    S.shake = 10;
+    S.popups.push({ x: C.W / 2, y: line - 56, text: '复活！清掉 ' + removed + ' 盒', life: 1.8, big: true });
+    sound('big');
+    return removed;
+  }
+
   function update(dt) {
     S.time += dt;
     if (S.dropCd > 0) S.dropCd -= dt;
@@ -212,9 +234,11 @@ var MG = MG || {};
 
   MG.core = {
     S: S,
+    world: world,
     reset: reset,
     setMode: setMode,
     drop: drop,
+    revive: revive,
     update: update,
     cartons: cartons,
     clampAim: clampAim,

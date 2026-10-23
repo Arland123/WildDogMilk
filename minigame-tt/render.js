@@ -203,7 +203,7 @@ var MG = MG || {};
     text(g, bestLabel, bx, head * 0.95, 11, 'rgba(90,61,30,.72)');
     bx += g.measureText(bestLabel).width + 7;
     bx += chip(g, 'mode', C.MODES[S.mode].name, bx, head * 0.95 - 13) + 6;
-    chip(g, 'gift', ui.giftReady ? '福利·可领' : '福利', bx, head * 0.95 - 13);
+    chip(g, 'gift', S.revive > 0 ? '复活×1' : (ui.giftReady ? '福利·可领' : '福利'), bx, head * 0.95 - 13);
 
     // 右上：下一个预览
     var pw = 56, ph = 62;
@@ -261,15 +261,23 @@ var MG = MG || {};
 
   function drawOver(g, L) {
     var S = MG.core.S;
-    var c = card(g, L, 218);
+    var hasRevive = S.revive > 0;
+    var c = card(g, L, hasRevive ? 262 : 218);
     var cx = c.x + c.w / 2;
     text(g, '奶溢出来了', cx, c.y + 40, 21, C.COLOR.ink, 'bold', 'center');
     text(g, '本局得分', cx, c.y + 66, 12, 'rgba(90,61,30,.7)', 'normal', 'center');
     text(g, String(S.score), cx, c.y + 102, 32, C.COLOR.red, 'bold', 'center');
     text(g, '最高分 ' + S.best, cx, c.y + 124, 12, 'rgba(90,61,30,.72)', 'normal', 'center');
     text(g, '本局最高合成 Lv.' + (S.maxLv + 1) + ' ' + C.LEVELS[S.maxLv].name, cx, c.y + 148, 12, 'rgba(90,61,30,.72)', 'normal', 'center');
-    pill(g, 'again', '再来一局', c.x + 16, c.y + 162, (c.w - 44) / 2, 40, { primary: true, size: 15 });
-    pill(g, 'askMode', '切换难度', c.x + 28 + (c.w - 44) / 2, c.y + 162, (c.w - 44) / 2, 40, { size: 14 });
+    var halfW = (c.w - 44) / 2;
+    if (hasRevive) {
+      pill(g, 'revive', '使用复活 · 清掉高位奶盒', c.x + 16, c.y + 160, c.w - 32, 40, { primary: true, size: 13.5 });
+      pill(g, 'again', '再来一局', c.x + 16, c.y + 208, halfW, 38, { size: 14 });
+      pill(g, 'askMode', '切换难度', c.x + 28 + halfW, c.y + 208, halfW, 38, { size: 13 });
+    } else {
+      pill(g, 'again', '再来一局', c.x + 16, c.y + 162, halfW, 40, { primary: true, size: 15 });
+      pill(g, 'askMode', '切换难度', c.x + 28 + halfW, c.y + 162, halfW, 40, { size: 14 });
+    }
   }
 
   function drawAsk(g, L, target) {
@@ -283,20 +291,25 @@ var MG = MG || {};
   }
 
   function drawGift(g, L, claimed) {
-    var c = card(g, L, 224);
+    var c = card(g, L, 248);
     var cx = c.x + c.w / 2;
-    text(g, '限定福利', cx, c.y + 36, 19, C.COLOR.red, 'bold', 'center');
-    text(g, '从抖音首页侧边栏进入游戏', cx, c.y + 62, 12.5, 'rgba(90,61,30,.8)', 'normal', 'center');
-    var steps = ['① 点下方「去首页侧边栏」', '② 在侧边栏点「合成野生狗奶」', '③ 回到游戏领取 +' + C.SIDEBAR_REWARD + ' 分开局奖励'];
+    text(g, '限定福利 · 复活机会', cx, c.y + 36, 18, C.COLOR.red, 'bold', 'center');
+    text(g, '把游戏添加到抖音首页侧边栏即可领取', cx, c.y + 60, 12, 'rgba(90,61,30,.8)', 'normal', 'center');
+    var steps = [
+      '① 点下方「去首页侧边栏」',
+      '② 在侧边栏点「合成野生狗奶」',
+      '③ 回到游戏，自动获得 1 次复活',
+    ];
     for (var i = 0; i < steps.length; i++) {
-      text(g, steps[i], c.x + 18, c.y + 88 + i * 21, 12, 'rgba(90,61,30,.72)');
+      text(g, steps[i], c.x + 18, c.y + 86 + i * 21, 12, 'rgba(90,61,30,.74)');
     }
+    text(g, '复活效果：清掉越过第 2 条虚线的奶盒', c.x + 18, c.y + 160, 11.5, C.COLOR.ghost, 'bold');
     if (claimed) {
-      text(g, '今天的奖励已领取，明天再来', cx, c.y + 168, 12.5, C.COLOR.ghost, 'bold', 'center');
-      pill(g, 'giftClose', '知道了', c.x + c.w / 2 - 60, c.y + 180, 120, 34, { primary: true, size: 14 });
+      text(g, '今天的福利已领取，明天再来', cx, c.y + 192, 12.5, 'rgba(90,61,30,.7)', 'normal', 'center');
+      pill(g, 'giftClose', '知道了', c.x + c.w / 2 - 60, c.y + 204, 120, 34, { primary: true, size: 14 });
     } else {
-      pill(g, 'giftGo', '去首页侧边栏', c.x + 16, c.y + 158, c.w - 78, 38, { primary: true, size: 14 });
-      pill(g, 'giftClose', '关闭', c.x + c.w - 58, c.y + 158, 42, 38, { size: 13 });
+      pill(g, 'giftGo', '去首页侧边栏', c.x + 16, c.y + 182, c.w - 78, 38, { primary: true, size: 14 });
+      pill(g, 'giftClose', '关闭', c.x + c.w - 58, c.y + 182, 42, 38, { size: 13 });
     }
   }
 

@@ -39,7 +39,7 @@ var MG = MG || {};
     GAP: 3,
     SUM_W: LEVELS.reduce(function (t, L) { return t + L.w; }, 0),
     MERGE_SCORE: LEVELS.map(function (_, i) { return i * (i + 1); }),
-    KEYS: { best: 'wdmBest_', mode: 'wdmMode', sound: 'wdmSound', gift: 'wdmGiftDay', legacyBest: 'wildDogMilkBest' },
+    KEYS: { best: 'wdmBest_', mode: 'wdmMode', sound: 'wdmSound', gift: 'wdmGiftDay', revive: 'wdmRevive', legacyBest: 'wildDogMilkBest' },
     FONT: '"PingFang SC","Microsoft YaHei",sans-serif',
     COLOR: {
       ink: '#5a3d1e', red: '#c2410c', accent: '#e8553a',
@@ -49,4 +49,7 @@ var MG = MG || {};
     },
     SIDEBAR_REWARD: 500, // 侧边栏复访：每日首次进入奖励的起始分
   };
+
+  // 复活线：自上往下数第 2 条货架虚线（虚线画在 DEAD_Y + 130 的倍数上）
+  MG.C.REVIVE_LINE = MG.C.DEAD_Y + 130 * 2;
 })();

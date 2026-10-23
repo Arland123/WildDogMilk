@@ -40,6 +40,7 @@ var MG = MG || {};
   // ===== 钩子 =====
   P.audio.setOn(soundOn);
   MG.core.setMode(mode, loadBest(mode));
+  S.revive = P.store.getNum(C.KEYS.revive) >= 1 ? 1 : 0;
   S.hooks.sound = function (n) { P.audio.play(n); };
   S.hooks.saveBest = function (v) { P.store.set(bestKey(S.mode), v); };
   S.hooks.onOver = function () { ui.overlay = 'over'; };
@@ -93,6 +94,15 @@ var MG = MG || {};
     }
     if (id === 'askOk') { applyMode(ui.target); return; }
     if (id === 'askCancel') { ui.overlay = 'none'; return; }
+    if (id === 'revive') {
+      if (S.revive > 0) {
+        S.revive -= 1;
+        P.store.set(C.KEYS.revive, S.revive);
+        MG.core.revive();      // 清掉越过第 2 条虚线的奶盒，继续这一局
+        ui.overlay = 'none';
+      }
+      return;
+    }
     if (id === 'gift') { ui.giftClaimed = claimedToday(); ui.overlay = 'gift'; return; }
     if (id === 'giftGo') { P.sidebar.goto(); return; }
     if (id === 'giftClose') { ui.overlay = 'none'; return; }
@@ -110,15 +120,18 @@ var MG = MG || {};
     claimSidebarReward();
   }
 
-  // 侧边栏复访：每日首次从侧边栏进入，给一局起始分奖励
+  // 侧边栏复访：每日首次从侧边栏进入 → 获得 1 次复活机会（最多存 1 次）
   function claimSidebarReward() {
     if (claimedToday()) { ui.giftReady = false; return; }
     if (!P.sidebar.fromSidebar()) { ui.giftReady = true; return; }
     P.store.set(C.KEYS.gift, today());
     ui.giftReady = false;
-    S.score += C.SIDEBAR_REWARD;
-    S.popups.push({ x: C.W / 2, y: S.H * 0.32, text: '侧边栏福利 +' + C.SIDEBAR_REWARD, life: 2.2, big: true });
-    P.audio.play('merge');
+    if (S.revive < 1) {
+      S.revive = 1;
+      P.store.set(C.KEYS.revive, 1);
+      S.popups.push({ x: C.W / 2, y: S.H * 0.32, text: '获得 1 次复活', life: 2.2, big: true });
+      P.audio.play('merge');
+    }
   }
 
   P.bindTouch({
