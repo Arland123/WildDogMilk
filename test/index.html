@@ -152,7 +152,10 @@ const FINAL_BONUS = 1000;                              // 两盒终极狗奶相�
 //   简单 750 → 有效堆叠 600
 // 警戒线要高过最大的可投放奶盒（第 5 级，高 134），不然手上那盒会被画到棋盘外
 const MODES = { hard: { name: '困难', h: 720 }, easy: { name: '简单', h: 750 } };
-const MODE_KEY = 'wildDogMilkMode';
+// 存档按路径隔离：/test/ 和正式版同域共用 localStorage，不隔离的话
+// 在测试链接里选的难度、刷的分数都会串到正式版，看起来就像"困难模式却是简单布局"
+const SCOPE = /\/test\//.test(location.pathname) ? 'test_' : '';
+const MODE_KEY = SCOPE + 'wildDogMilkMode';
 let mode = localStorage.getItem(MODE_KEY) === 'easy' ? 'easy' : 'hard';
 const W = 400;
 let H = MODES[mode].h;
@@ -175,11 +178,13 @@ const world = engine.world;
 let viewScale = 1, dpr = 1;
 let particles = [], popups = [], mergeQueue = [];
 // 最高分按难度分别记录：简单模式更容易出高分，混在一起会污染困难模式的记录
-function bestKey() { return 'wildDogMilkBest_' + mode; }
+function bestKey() { return SCOPE + 'wildDogMilkBest_' + mode; }
 function loadBest() { return +localStorage.getItem(bestKey()) || 0; }
 
 // 老版本只有一条最高分，且那时候只有困难模式（H=720），升级时迁移一次就删掉旧 key
+// 只在正式版做迁移，测试页不碰（测试页的分数不该进正式记录）
 (function migrateLegacyBest() {
+  if (SCOPE) return;
   const legacy = +localStorage.getItem('wildDogMilkBest') || 0;
   if (legacy > 0 && localStorage.getItem('wildDogMilkBest_hard') === null) {
     localStorage.setItem('wildDogMilkBest_hard', legacy);
@@ -568,6 +573,9 @@ let pendingMode = mode;
 function syncMode() {
   modeBtn.textContent = MODES[mode].name;
   modeBtn.setAttribute('aria-label', `难度：${MODES[mode].name}，点击切换`);
+  // 用底色区分难度，扫一眼就知道当前是哪个，不用去读字
+  modeBtn.style.background = mode === 'easy' ? '#dcfce7' : '#fff7e0';
+  modeBtn.style.color = mode === 'easy' ? '#15803d' : '#8a5a2b';
 }
 function applyMode(next) {
   mode = next;
@@ -578,6 +586,9 @@ function applyMode(next) {
   syncMode();
   layout();               // 画布尺寸按新高度重算
   reset();                // 清空世界并重新开一局
+  // 切换后给个明确反馈，避免"看着像没生效"
+  popups.push({ x: W / 2, y: H * .42, text: `已切到${MODES[mode].name}`, life: 1.8, big: true });
+  popups.push({ x: W / 2, y: H * .42 + 34, text: `有效堆叠 ${H - DEAD_Y}`, life: 1.8 });
   tone(520, .12, 'sine', .18, .06);
 }
 modeBtn.addEventListener('click', () => {
