@@ -178,6 +178,15 @@ let particles = [], popups = [], mergeQueue = [];
 function bestKey() { return 'wildDogMilkBest_' + mode; }
 function loadBest() { return +localStorage.getItem(bestKey()) || 0; }
 
+// 老版本只有一条最高分，且那时候只有困难模式（H=720），升级时迁移一次就删掉旧 key
+(function migrateLegacyBest() {
+  const legacy = +localStorage.getItem('wildDogMilkBest') || 0;
+  if (legacy > 0 && localStorage.getItem('wildDogMilkBest_hard') === null) {
+    localStorage.setItem('wildDogMilkBest_hard', legacy);
+  }
+  localStorage.removeItem('wildDogMilkBest');
+})();
+
 let score = 0, best = loadBest();
 let curLv = 0, nextLv = 0, aimX = W / 2, dropCd = 0;
 let dangerT = 0, maxLv = 0, shake = 0, over = false, acc = 0, lastT = 0, time = 0;
