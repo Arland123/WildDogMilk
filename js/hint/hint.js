@@ -16,6 +16,11 @@
 
   var HKEY = (typeof SCOPE === 'string' ? SCOPE : '') + 'wildDogMilkHint';
 
+  // 是否画出"下一盒的预估位置"（蓝线）。
+  // 它有真实信息（下一盒等级是公开的），但会随局面重算而变，且与绿线抢注意力，
+  // 所以默认关闭；想开回来把它改成 true 即可，不影响搜索与建议质量。
+  var SHOW_NEXT = false;
+
   var unlocked = false;
   try { unlocked = localStorage.getItem(HKEY) === '1'; } catch (e) {}
 
@@ -190,8 +195,8 @@
     g.arc(x, landY - 3, 3.2, 0, Math.PI * 2);
     g.fill();
 
-    // 下一盒的预估位置：更淡的蓝线，同样只画到落点
-    if (typeof result.nextX === 'number') {
+    // 下一盒的预估位置：默认不画（见 SHOW_NEXT 的说明）
+    if (SHOW_NEXT && typeof result.nextX === 'number') {
       var ny = surfaceY(result.nextX);
       g.setLineDash([5, 9]);
       g.lineWidth = 1.8;
