@@ -75,7 +75,7 @@
   <div>
     <div class="title">合成野生狗奶</div>
     <div class="score" id="score" aria-live="polite">0</div>
-    <div class="best">最高 <span id="best">0</span><button class="mode-chip" id="modeBtn" type="button" aria-label="难度：困难，点击切换">困难</button></div>
+    <div class="best">最高 <span id="best">0</span><button class="mode-chip" id="modeBtn" type="button" aria-label="难度：困难，点击切换">困难</button><button class="mode-chip" id="hintBtn" type="button" aria-label="提示模式" hidden>提示</button></div>
   </div>
   <div class="right">
     <div class="next"><span>下一个</span><canvas id="next" aria-label="下一个奶盒"></canvas></div>
@@ -202,6 +202,7 @@ function loadBest() { return +localStorage.getItem(bestKey()) || 0; }
 })();
 
 let score = 0, best = loadBest();
+let mergeCount = 0;   // 供提示模式做两步收益比较（hint.js 读取）
 let curLv = 0, nextLv = 0, aimX = W / 2, dropCd = 0;
 let dangerT = 0, maxLv = 0, shake = 0, over = false, acc = 0, lastT = 0, time = 0;
 let soundOn = localStorage.getItem('wildDogMilkSound') !== '0';
@@ -315,10 +316,12 @@ function reset() {
   Composite.add(world, walls);
   particles = []; popups = []; mergeQueue = [];
   score = 0; maxLv = 0; dangerT = 0; dropCd = 0; shake = 0; over = false;
+  mergeCount = 0;
   curLv = randLv(); nextLv = randLv();
   aimX = W / 2;
   $('over').hidden = true;
   $('modeAsk').hidden = true;
+  if (window.__hintInvalidate) window.__hintInvalidate();
   updateHud(); drawNext(); drawChain();
 }
 
@@ -334,6 +337,7 @@ function drop() {
   tone(320, .08, 'triangle', .12);
   curLv = nextLv; nextLv = randLv();
   dropCd = .5;
+  if (window.__hintInvalidate) window.__hintInvalidate();
   drawNext();
 }
 
@@ -370,6 +374,7 @@ Events.on(engine, 'collisionActive', onCollide);
 function merge(a, b) {
   Composite.remove(world, [a, b]);
   const x = (a.position.x + b.position.x) / 2, y = (a.position.y + b.position.y) / 2;
+  mergeCount++;
   if (a.lv === LAST) {
     burst(x, y, '#ffd34d', 70, 520);
     shake = 14;
@@ -390,6 +395,8 @@ function merge(a, b) {
   }
   if (lv === LAST) { shake = 10; tone(520, .5, 'triangle', .2); tone(780, .5, 'triangle', .15, .15); }
   else { shake = Math.max(shake, lv * .5); tone(780 - lv * 50, .14, 'sine', .22); }
+  // 彩蛋：玩家自己合成出最高级，解锁提示模式（hint.js 负责记忆与 UI）
+  if (lv === LAST && window.__hintUnlock) window.__hintUnlock();
 }
 
 function update(dt) {
@@ -472,6 +479,9 @@ function render() {
   }
 
   for (const b of cartons()) drawCarton(ctx, b.lv, b.position.x, b.position.y, b.k, b.angle);
+
+  // 彩蛋提示（解锁后才有内容，未解锁时是空操作）
+  if (window.__hintDraw) window.__hintDraw(ctx);
 
   for (const p of particles) {
     ctx.globalAlpha = Math.max(0, p.life);
@@ -637,5 +647,7 @@ layout();
 reset();
 requestAnimationFrame(loop);
 </script>
+<!-- 彩蛋：合成出最高级后才解锁的提示模式（独立文件，不影响主逻辑） -->
+<script src="js/hint/hint.js"></script>
 </body>
 </html>
