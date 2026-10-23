@@ -381,13 +381,19 @@ function render() {
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, '#fffaf0'); bg.addColorStop(1, '#ffe9c7');
   ctx.fillStyle = bg; ctx.fillRect(-20, -20, W + 40, H + 40);
-  ctx.fillStyle = '#f3d3a3';
-  for (let y = DEAD_Y + 130; y < H; y += 130) ctx.fillRect(0, y, W, 3);
+  // 货架横线：虚线，避免和实线的警戒线抢视觉重量
+  ctx.save();
+  ctx.setLineDash([12, 10]);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#f3d3a3';
+  for (let y = DEAD_Y + 130; y < H; y += 130) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.restore();
   ctx.fillStyle = '#d69a55'; ctx.fillRect(0, H - 6, W, 6);
 
-  // 警戒线
+  // 警戒线：实线，越线时变红闪烁
   ctx.save();
-  ctx.setLineDash([10, 8]);
   ctx.lineWidth = 2;
   ctx.strokeStyle = dangerT > 0 ? `rgba(230,40,30,${.5 + .5 * Math.sin(time * 18)})` : 'rgba(200,120,60,.35)';
   ctx.beginPath(); ctx.moveTo(0, DEAD_Y); ctx.lineTo(W, DEAD_Y); ctx.stroke();
