@@ -57,6 +57,17 @@
     margin-top: 14px; border: 0; border-radius: 12px; padding: 10px 26px; cursor: pointer;
     font: inherit; font-size: 17px; font-weight: 700; color: #fff; background: #e8553a; box-shadow: 0 3px 0 #a8321d;
   }
+  .dialog .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+  .dialog .row .btn { margin-top: 0; }
+  .btn.ghost { background: #fff; color: #8a5a2b; box-shadow: 0 3px 0 #e5b679; }
+  .dialog .hint { font-size: 12px; opacity: .7; }
+  /* 难度切换：贴在「最高 xx」后面，做成小圆角标签，不额外占头部高度 */
+  .mode-chip {
+    margin-left: 6px; padding: 1px 7px; border: 0; border-radius: 9px; cursor: pointer;
+    font: inherit; font-size: 11px; font-weight: 700; color: #8a5a2b; vertical-align: 1px;
+    background: #fff; box-shadow: 0 1px 0 #e5b679;
+  }
+  .mode-chip:active { transform: translateY(1px); }
 </style>
 </head>
 <body>
@@ -65,7 +76,7 @@
   <div>
     <div class="title">合成野生狗奶</div>
     <div class="score" id="score" aria-live="polite">0</div>
-    <div class="best">最高 <span id="best">0</span></div>
+    <div class="best">最高 <span id="best">0</span><button class="mode-chip" id="modeBtn" type="button" aria-label="难度：困难，点击切换">困难</button></div>
   </div>
   <div class="right">
     <div class="next"><span>下一个</span><canvas id="next" aria-label="下一个奶盒"></canvas></div>
@@ -86,6 +97,18 @@
       <p>最高分 <span id="finalBest">0</span></p>
       <p>本局最高合成：<span id="finalLevel">-</span></p>
       <button class="btn" id="restartBtn" type="button">再来一局</button>
+    </div>
+  </div>
+  <div class="overlay" id="modeAsk" hidden>
+    <div class="dialog" role="dialog" aria-labelledby="modeAskTitle">
+      <div class="emoji">🎚️</div>
+      <h2 id="modeAskTitle">切到「简单」？</h2>
+      <p>切换难度需要重开本局</p>
+      <p class="hint">当前这局的分数不会保留</p>
+      <div class="row">
+        <button class="btn ghost" id="modeCancel" type="button">再想想</button>
+        <button class="btn" id="modeOk" type="button">切换</button>
+      </div>
     </div>
   </div>
 </div>
@@ -124,8 +147,15 @@ const MERGE_SCORE = LEVELS.map((_, i) => i * (i + 1)); // 合成出第 i 级得�
 const FINAL_BONUS = 1000;                              // 两盒终极狗奶相撞：一起炸掉
 
 // ===== 世界参数（逻辑坐标） =====
-// 警戒线要高过最大的可投放奶盒（第 5 级），手上那盒才能完整显示
-const W = 400, H = 750;
+// 只有棋盘高度随难度变化，警戒线固定 150：
+//   困难 720 → 有效堆叠 570（原版手感）
+//   简单 750 → 有效堆叠 600
+// 警戒线要高过最大的可投放奶盒（第 5 级，高 134），不然手上那盒会被画到棋盘外
+const MODES = { hard: { name: '困难', h: 720 }, easy: { name: '简单', h: 750 } };
+const MODE_KEY = 'wildDogMilkMode';
+let mode = localStorage.getItem(MODE_KEY) === 'easy' ? 'easy' : 'hard';
+const W = 400;
+let H = MODES[mode].h;
 const DEAD_Y = 150;
 const STEP = 1000 / 60;
 const PI2 = Math.PI * 2;
@@ -144,18 +174,25 @@ const world = engine.world;
 
 let viewScale = 1, dpr = 1;
 let particles = [], popups = [], mergeQueue = [];
-let score = 0, best = +localStorage.getItem('wildDogMilkBest') || 0;
+// 最高分按难度分别记录：简单模式更容易出高分，混在一起会污染困难模式的记录
+function bestKey() { return 'wildDogMilkBest_' + mode; }
+function loadBest() { return +localStorage.getItem(bestKey()) || 0; }
+
+let score = 0, best = loadBest();
 let curLv = 0, nextLv = 0, aimX = W / 2, dropCd = 0;
 let dangerT = 0, maxLv = 0, shake = 0, over = false, acc = 0, lastT = 0, time = 0;
 let soundOn = localStorage.getItem('wildDogMilkSound') !== '0';
 
-// 墙体放在可视区外，足够厚防止穿透
+// 墙体放在可视区外，足够厚防止穿透；换难度时连同高度一起重建
 const WALL = 200;
-const walls = [
-  Bodies.rectangle(W / 2, H + WALL / 2, W + WALL * 2, WALL, { isStatic: true, friction: .6 }),
-  Bodies.rectangle(-WALL / 2, H / 2 - 400, WALL, H + 800, { isStatic: true, friction: .1 }),
-  Bodies.rectangle(W + WALL / 2, H / 2 - 400, WALL, H + 800, { isStatic: true, friction: .1 }),
-];
+function buildWalls() {
+  return [
+    Bodies.rectangle(W / 2, H + WALL / 2, W + WALL * 2, WALL, { isStatic: true, friction: .6 }),
+    Bodies.rectangle(-WALL / 2, H / 2 - 400, WALL, H + 800, { isStatic: true, friction: .1 }),
+    Bodies.rectangle(W + WALL / 2, H / 2 - 400, WALL, H + 800, { isStatic: true, friction: .1 }),
+  ];
+}
+let walls = buildWalls();
 
 // ===== 贴图 =====
 LEVELS.forEach((L) => {
@@ -258,6 +295,7 @@ function reset() {
   curLv = randLv(); nextLv = randLv();
   aimX = W / 2;
   $('over').hidden = true;
+  $('modeAsk').hidden = true;
   updateHud(); drawNext(); drawChain();
 }
 
@@ -279,7 +317,7 @@ function drop() {
 function addScore(n, x, y) {
   score += n;
   popups.push({ x, y, text: '+' + n, life: 1 });
-  if (score > best) { best = score; localStorage.setItem('wildDogMilkBest', best); }
+  if (score > best) { best = score; localStorage.setItem(bestKey(), best); }
   updateHud();
 }
 
@@ -500,6 +538,11 @@ cvs.addEventListener('pointermove', (e) => { aimX = toLogicalX(e); });
 cvs.addEventListener('pointerup', (e) => { aimX = toLogicalX(e); drop(); });
 
 window.addEventListener('keydown', (e) => {
+  // 切难度确认框开着时，只允许 Esc 关闭，避免空格在弹窗后面偷偷投盒
+  if (!$('modeAsk').hidden) {
+    if (e.key === 'Escape') $('modeAsk').hidden = true;
+    return;
+  }
   if (e.target.tagName === 'BUTTON' && (e.key === ' ' || e.key === 'Enter')) return;
   if (e.key === 'ArrowLeft') aimX = Math.max(0, clampAim(curLv) - 12);
   else if (e.key === 'ArrowRight') aimX = Math.min(W, clampAim(curLv) + 12);
@@ -509,6 +552,32 @@ window.addEventListener('keydown', (e) => {
 
 $('resetBtn').addEventListener('click', reset);
 $('restartBtn').addEventListener('click', reset);
+
+// ===== 难度切换（改棋盘高度必须重开一局，否则墙体和画布坐标都会错位） =====
+const modeBtn = $('modeBtn');
+let pendingMode = mode;
+function syncMode() {
+  modeBtn.textContent = MODES[mode].name;
+  modeBtn.setAttribute('aria-label', `难度：${MODES[mode].name}，点击切换`);
+}
+function applyMode(next) {
+  mode = next;
+  localStorage.setItem(MODE_KEY, mode);
+  H = MODES[mode].h;
+  walls = buildWalls();   // 新旧高度差多少，墙就重建成多少
+  best = loadBest();      // 切难度同时切最高分
+  syncMode();
+  layout();               // 画布尺寸按新高度重算
+  reset();                // 清空世界并重新开一局
+  tone(520, .12, 'sine', .18, .06);
+}
+modeBtn.addEventListener('click', () => {
+  pendingMode = mode === 'hard' ? 'easy' : 'hard';
+  $('modeAskTitle').textContent = `切到「${MODES[pendingMode].name}」？`;
+  $('modeAsk').hidden = false;
+});
+$('modeOk').addEventListener('click', () => { $('modeAsk').hidden = true; applyMode(pendingMode); });
+$('modeCancel').addEventListener('click', () => { $('modeAsk').hidden = true; });
 const soundBtn = $('soundBtn');
 function syncSound() {
   soundBtn.textContent = soundOn ? '🔊' : '🔇';
@@ -534,6 +603,7 @@ function loop(t) {
 }
 
 syncSound();
+syncMode();
 layout();
 reset();
 requestAnimationFrame(loop);
