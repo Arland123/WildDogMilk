@@ -1,0 +1,10 @@
+{
+  "appid": "ttcfe4b959519a6dfb02",
+  "projectname": "hecheng-yesheng-gounai",
+  "setting": {
+    "es6": true,
+    "minified": false,
+    "urlCheck": false
+  },
+  "compileType": "game"
+}
