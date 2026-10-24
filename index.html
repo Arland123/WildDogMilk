@@ -198,6 +198,12 @@ const MODE_KEY = SCOPE + 'wildDogMilkMode';
 })();
 
 let mode = localStorage.getItem(MODE_KEY) === 'easy' ? 'easy' : 'hard';
+
+// 只在测试页生效的预览开关：/test/?egg=1 直接解锁提示彩蛋，方便手机上预览
+// （正式版没有 SCOPE，所以线上玩家无法用这个参数跳过彩蛋）
+if (SCOPE && /[?&]egg=1/.test(location.search)) {
+  localStorage.setItem(SCOPE + 'wildDogMilkHint', '1');
+}
 const W = 400;
 let H = MODES[mode].h;
 const DEAD_Y = 150;
