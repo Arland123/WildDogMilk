@@ -141,13 +141,28 @@
     if (btn) btn.textContent = '提示';
   }
 
+  // 底部浮出提示条：不走 canvas，也不挡分数和棋盘（挡住的是合成表那条装饰带）
+  function toast(title, sub) {
+    var el = document.createElement('div');
+    el.style.cssText = 'position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom, 0px) + 16px);z-index:40;pointer-events:none;' +
+      'transform:translate(-50%,10px);opacity:0;transition:opacity .28s ease,transform .28s ease;' +
+      'background:#fffaf0;border:1px solid rgba(180,120,50,.28);border-radius:14px;padding:10px 18px;' +
+      'box-shadow:0 10px 28px rgba(120,70,20,.22);text-align:center;font-size:12px;line-height:1.55;color:#4a3218;' +
+      'max-width:80vw;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif';
+    el.innerHTML = '<b style="font-size:15px;color:#c2410c;letter-spacing:.5px">' + title + '</b>' +
+      (sub ? '<br><span style="opacity:.72">' + sub + '</span>' : '');
+    document.body.appendChild(el);
+    requestAnimationFrame(function () { el.style.opacity = '1'; el.style.transform = 'translate(-50%,0)'; });
+    setTimeout(function () { el.style.opacity = '0'; el.style.transform = 'translate(-50%,10px)'; }, 3600);
+    setTimeout(function () { el.remove(); }, 4000);
+  }
+
   function unlock() {
     if (unlocked) return;
     unlocked = true;
     try { localStorage.setItem(HKEY, '1'); } catch (e) {}
     if (btn) btn.hidden = false;
-    popups.push({ x: W / 2, y: H * 0.30, text: '彩蛋解锁 · 提示模式', life: 3, big: true });
-    popups.push({ x: W / 2, y: H * 0.30 + 36, text: '点上方「提示」看推荐落点', life: 3 });
+    toast('彩蛋解锁 · 提示模式', '点顶部「提示」查看落点');
     tone(760, .18, 'sine', .22, .1);
     setTimeout(function () { tone(1140, .22, 'sine', .2, .1); }, 130);
   }
