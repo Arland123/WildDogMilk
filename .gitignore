@@ -1,3 +1,6 @@
 .workbuddy/
 .DS_Store
 Thumbs.db
+
+# WorkBuddy 发布用临时目录（由 index.html 复制而来，不要提交）
+.web-deploy/
