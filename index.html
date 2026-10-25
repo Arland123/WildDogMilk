@@ -258,10 +258,21 @@ function buildWalls() {
 let walls = buildWalls();
 
 // ===== 贴图 =====
-LEVELS.forEach((L) => {
+// 加载失败（移动网络抖动）时自动重试，带时间戳避开缓存的失败响应
+function loadLevelImg(L, tries) {
   const img = new Image();
-  img.onload = () => { L.img = img; drawNext(); drawChain(); };
-  img.src = `img/${LEVELS.indexOf(L) + 1}.png`;
+  L.loading = true;
+  img.onload = () => { L.loading = false; L.img = img; drawNext(); drawChain(); };
+  img.onerror = () => {
+    L.loading = false;
+    if (tries < 8) setTimeout(() => loadLevelImg(L, tries + 1), Math.min(500 * (tries + 1), 4000));
+  };
+  img.src = `img/${LEVELS.indexOf(L) + 1}.png` + (tries ? `?r=${Date.now()}` : '');
+}
+LEVELS.forEach((L) => loadLevelImg(L, 0));
+// 兜底：回到前台时补载仍缺失的贴图
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) LEVELS.forEach((L) => { if (!L.img && !L.loading) loadLevelImg(L, 1); });
 });
 
 function roundRect(g, x, y, w, h, r) {
@@ -459,6 +470,16 @@ function makeTitleSheet() {
 }
 
 function megaBoom(x, y) {
+  // 有过场动画就先放过场，棋盘上的爆炸特效推迟到过场的爆点（1.45s）再出
+  if (window.__playBoomCinematic && !window.__boomCinematicOff) {
+    window.__playBoomCinematic();
+    setTimeout(() => { if (!over) megaBoomFx(x, y, false); }, 1450);
+    return;
+  }
+  megaBoomFx(x, y, true);
+}
+
+function megaBoomFx(x, y, withSound) {
   boom = { x, y, t: 0 };
   flash = .55; slow = .9; shake = 34;
   for (let i = 0; i < 4; i++) rings.push({ x, y, r: 10, v: 620 + i * 90, w: 22 - i * 3, life: 1, delay: i * .09 });
@@ -467,7 +488,7 @@ function megaBoom(x, y) {
   for (let k = 0; k < 100; k++) {            // 发光火花（加色混合，带拖尾）
     const a = Math.random() * PI2, v = 250 + Math.random() * 900;
     particles.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 200, r: 1.5 + Math.random() * 2.5,
-      life: 1, decay: .5 + Math.random() * .7, color: Math.random() < .5 ? '#ffe9a0' : '#ffb347', spark: true, g: 500 });
+      life: 1, decay: .5 + Math.random() * .7, color: Math.random() < .5 ? '#ffe9a0' : '#ffb347', spark: true, g: 500, tr: [x, y] });
   }
   for (let k = 0; k < 90; k++) {             // 彩纸
     const a = -Math.PI / 2 + (Math.random() - .5) * 2.6, v = 300 + Math.random() * 800;
@@ -484,7 +505,7 @@ function megaBoom(x, y) {
   popups.push({ x: W / 2, y: H * .36, text: '狗奶大爆炸', life: 2.8, mega: true });
   popups.push({ x: W / 2, y: H * .36 + 64, text: '🐕 终极进化 · +' + FINAL_BONUS, life: 2.4, sub: true });
   if (navigator.vibrate) navigator.vibrate([60, 30, 120, 30, 200]);
-  boomSound();
+  if (withSound) boomSound();
 }
 
 function boomSound() {
@@ -540,6 +561,8 @@ function merge(a, b) {
   else { shake = Math.max(shake, lv * .5); tone(780 - lv * 50, .14, 'sine', .22); }
   // 彩蛋：玩家自己合成出最高级，解锁提示模式（hint.js 负责记忆与 UI）
   if (lv === LAST && window.__hintUnlock) window.__hintUnlock();
+  // 合成出狗奶（最高级）就触发大爆炸彩蛋
+  if (lv === LAST) megaBoom(x, y);
 }
 
 function update(dt) {
@@ -671,9 +694,12 @@ function render() {
     } else if (p.spark) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
       ctx.strokeStyle = p.color; ctx.lineWidth = p.r; ctx.lineCap = 'round';
-      ctx.beginPath(); ctx.moveTo(p.tr[0], p.tr[1]);
-      for (let i = 2; i < p.tr.length; i += 2) ctx.lineTo(p.tr[i], p.tr[i + 1]);
-      ctx.stroke();
+      // 火花可能诞生在两次 update 之间（过场后的延迟爆炸走 setTimeout），此时 tr 还空着
+      if (p.tr && p.tr.length >= 4) {
+        ctx.beginPath(); ctx.moveTo(p.tr[0], p.tr[1]);
+        for (let i = 2; i < p.tr.length; i += 2) ctx.lineTo(p.tr[i], p.tr[i + 1]);
+        ctx.stroke();
+      }
       ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 1.2, 0, PI2); ctx.fill();
       ctx.restore();
     } else {
@@ -872,7 +898,9 @@ function loop(t) {
   let n = 0;
   while (acc >= STEP && n++ < 6) { update(STEP / 1000); acc -= STEP; }
   if (n >= 6) acc = 0;
-  render();
+  // 单帧渲染出错不能让整个游戏循环停掉（rAF 在 render 之后才排下一次）
+  try { render(); }
+  catch (err) { if (!loop.warned) { loop.warned = true; console.error('[render] 跳过该帧：', err); } }
   requestAnimationFrame(loop);
 }
 
@@ -884,6 +912,7 @@ requestAnimationFrame(loop);
 </script>
 <!-- 彩蛋：合成出最高级后才解锁的提示模式（独立文件，不影响主逻辑） -->
 <script src="js/hint/hint.js"></script>
+<script src="js/cinematic.js"></script>
 <script>
   // 提前把爆炸光芒贴图渲染好，避免第一次爆炸时在最关键的一帧卡一下
   setTimeout(() => { try { makeBurstSheet(); makeGlowSheet(); makeTitleSheet(); } catch (e) {} }, 1200);
